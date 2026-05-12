@@ -14,7 +14,158 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      allowed_users: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          role: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          role?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          role?: string
+        }
+        Relationships: []
+      }
+      master_products: {
+        Row: {
+          created_at: string
+          deskripsi: string | null
+          disc_percent: number
+          harga: number
+          id: string
+          kemasan: string | null
+          kode: string
+          nama_produk: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deskripsi?: string | null
+          disc_percent?: number
+          harga?: number
+          id?: string
+          kemasan?: string | null
+          kode: string
+          nama_produk: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deskripsi?: string | null
+          disc_percent?: number
+          harga?: number
+          id?: string
+          kemasan?: string | null
+          kode?: string
+          nama_produk?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      po_items: {
+        Row: {
+          created_at: string
+          disc_percent: number
+          disc_rp: number
+          harga: number
+          id: string
+          kemasan: string | null
+          kode: string
+          nama_produk: string
+          no_item: number
+          po_id: string
+          qty: number
+          subtotal: number
+        }
+        Insert: {
+          created_at?: string
+          disc_percent?: number
+          disc_rp?: number
+          harga?: number
+          id?: string
+          kemasan?: string | null
+          kode: string
+          nama_produk: string
+          no_item: number
+          po_id: string
+          qty: number
+          subtotal?: number
+        }
+        Update: {
+          created_at?: string
+          disc_percent?: number
+          disc_rp?: number
+          harga?: number
+          id?: string
+          kemasan?: string | null
+          kode?: string
+          nama_produk?: string
+          no_item?: number
+          po_id?: string
+          qty?: number
+          subtotal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "po_items_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          catatan: string | null
+          created_at: string
+          created_by: string | null
+          grand_total: number
+          id: string
+          no_po: string
+          ppn: number
+          status: string
+          subtotal: number
+          tgl_po: string
+          updated_at: string
+        }
+        Insert: {
+          catatan?: string | null
+          created_at?: string
+          created_by?: string | null
+          grand_total?: number
+          id?: string
+          no_po: string
+          ppn?: number
+          status?: string
+          subtotal?: number
+          tgl_po: string
+          updated_at?: string
+        }
+        Update: {
+          catatan?: string | null
+          created_at?: string
+          created_by?: string | null
+          grand_total?: number
+          id?: string
+          no_po?: string
+          ppn?: number
+          status?: string
+          subtotal?: number
+          tgl_po?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
