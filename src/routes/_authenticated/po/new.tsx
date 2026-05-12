@@ -76,23 +76,24 @@ function calcSubtotal(it: Item) {
   return Math.max(0, gross - disc);
 }
 
-async function generatePoNumber(): Promise<string> {
-  const d = new Date();
-  const ym = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
-  const prefix = `PO-${ym}-`;
+async function generatePoNumber(dateStr: string): Promise<string> {
+  // dateStr: YYYY-MM-DD
+  const ymd = dateStr.replaceAll("-", "");
+  const prefix = `DO.${ymd}.`;
   const { data } = await supabase
     .from("purchase_orders")
     .select("no_po")
-    .like("no_po", `${prefix}%`)
+    .like("no_po", `${prefix}%KS`)
     .order("no_po", { ascending: false })
     .limit(1);
   let next = 1;
   if (data && data.length) {
     const last = data[0].no_po as string;
-    const n = parseInt(last.slice(prefix.length), 10);
+    const mid = last.slice(prefix.length, prefix.length + 2);
+    const n = parseInt(mid, 10);
     if (!isNaN(n)) next = n + 1;
   }
-  return `${prefix}${String(next).padStart(4, "0")}`;
+  return `${prefix}${String(next).padStart(2, "0")}KS`;
 }
 
 function PoNew() {
