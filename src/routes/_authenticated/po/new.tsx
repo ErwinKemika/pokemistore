@@ -253,10 +253,10 @@ function PoNew() {
                 <TableHead className="w-12">No</TableHead>
                 <TableHead className="min-w-[280px]">Barang</TableHead>
                 <TableHead className="w-32">Kemasan</TableHead>
-                <TableHead className="w-20 text-right">Qty</TableHead>
-                <TableHead className="w-32 text-right">Harga</TableHead>
-                <TableHead className="w-20 text-right">Disc %</TableHead>
-                <TableHead className="w-36 text-right">Subtotal</TableHead>
+                <TableHead className="w-20 pr-6 text-right">Qty</TableHead>
+                <TableHead className="w-32 pr-6 text-right">Harga</TableHead>
+                <TableHead className="w-24 pr-6 text-right">Disc %</TableHead>
+                <TableHead className="w-36 pr-6 text-right">Subtotal</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
