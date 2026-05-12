@@ -253,10 +253,10 @@ function PoNew() {
                 <TableHead className="w-12">No</TableHead>
                 <TableHead className="min-w-[280px]">Barang</TableHead>
                 <TableHead className="w-32">Kemasan</TableHead>
-                <TableHead className="w-20 text-right">Qty</TableHead>
-                <TableHead className="w-32 text-right">Harga</TableHead>
-                <TableHead className="w-20 text-right">Disc %</TableHead>
-                <TableHead className="w-36 text-right">Subtotal</TableHead>
+                <TableHead className="w-20 pr-6 text-right">Qty</TableHead>
+                <TableHead className="w-32 pr-6 text-right">Harga</TableHead>
+                <TableHead className="w-24 pr-6 text-right">Disc %</TableHead>
+                <TableHead className="w-36 pr-6 text-right">Subtotal</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
@@ -403,36 +403,34 @@ function ItemRow({
           className="h-9"
         />
       </TableCell>
-      <TableCell>
+      <TableCell className="pr-6">
         <Input
-          type="number"
-          min="1"
+          type="text"
+          inputMode="numeric"
           value={item.qty}
-          onChange={(e) => onUpdate({ qty: Math.max(0, Number(e.target.value) || 0) })}
-          className="h-9 text-right"
+          onChange={(e) => onUpdate({ qty: Math.max(0, Number(e.target.value.replace(",", ".")) || 0) })}
+          className="h-9 text-right tabular-nums"
         />
       </TableCell>
-      <TableCell>
+      <TableCell className="pr-6">
         <Input
-          type="number"
-          min="0"
+          type="text"
+          inputMode="numeric"
           value={item.harga}
-          onChange={(e) => onUpdate({ harga: Math.max(0, Number(e.target.value) || 0) })}
-          className="h-9 text-right"
+          onChange={(e) => onUpdate({ harga: Math.max(0, Number(e.target.value.replace(",", ".")) || 0) })}
+          className="h-9 text-right tabular-nums"
         />
       </TableCell>
-      <TableCell>
+      <TableCell className="pr-6">
         <Input
-          type="number"
-          min="0"
-          max="100"
-          step="0.01"
+          type="text"
+          inputMode="decimal"
           value={item.disc_percent}
-          onChange={(e) => onUpdate({ disc_percent: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })}
-          className="h-9 text-right"
+          onChange={(e) => onUpdate({ disc_percent: Math.max(0, Math.min(100, Number(e.target.value.replace(",", ".")) || 0)) })}
+          className="h-9 text-right tabular-nums"
         />
       </TableCell>
-      <TableCell className="text-right font-medium">{fmtIDR(sub)}</TableCell>
+      <TableCell className="pr-6 text-right font-medium tabular-nums">{fmtIDR(sub)}</TableCell>
       <TableCell>
         <Button size="icon" variant="ghost" onClick={onRemove} className="text-destructive hover:text-destructive">
           <Trash2 className="h-4 w-4" />
