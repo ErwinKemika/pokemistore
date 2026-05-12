@@ -111,13 +111,20 @@ function PoNew() {
     (async () => {
       const [{ data: prods }, no] = await Promise.all([
         supabase.from("master_products").select("id,kode,nama_produk,kemasan,harga,disc_percent").order("kode"),
-        generatePoNumber(),
+        generatePoNumber(tglPo),
       ]);
       setProducts((prods ?? []) as Product[]);
       setNoPo(no);
       setLoadingProducts(false);
     })();
   }, []);
+
+  // Regenerate PO number when date changes
+  useEffect(() => {
+    if (loadingProducts) return;
+    generatePoNumber(tglPo).then(setNoPo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tglPo]);
 
   const update = (rowId: string, patch: Partial<Item>) => {
     setItems((prev) => prev.map((it) => (it.rowId === rowId ? { ...it, ...patch } : it)));
