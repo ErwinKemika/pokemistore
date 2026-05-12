@@ -182,7 +182,7 @@ function Products() {
         return "";
       };
 
-      const records = rows
+      const rawRecords = rows
         .map((r) => ({
           kode: String(pick(r, ["kode", "kodebarang", "sku"]) ?? "").trim(),
           nama_produk: String(pick(r, ["namaproduk", "nama", "namabarang", "produk"]) ?? "").trim(),
@@ -193,36 +193,42 @@ function Products() {
         }))
         .filter((r) => r.kode && r.nama_produk);
 
+      // Dedupe dalam file (keep last entry per kode)
+      const dedupMap = new Map<string, typeof rawRecords[number]>();
+      for (const r of rawRecords) dedupMap.set(r.kode, r);
+      const records = Array.from(dedupMap.values());
+      const skippedDup = rawRecords.length - records.length;
+      const skippedEmpty = rows.length - rawRecords.length;
+
       if (records.length === 0) {
         toast.error("Tidak ada baris valid. Pastikan ada kolom 'kode' dan 'nama_produk'.");
         return;
       }
 
       const { data: existing } = await supabase.from("master_products").select("id, kode");
-      const map = new Map((existing ?? []).map((e: { id: string; kode: string }) => [e.kode, e.id]));
+      const existingKodes = new Set((existing ?? []).map((e: { kode: string }) => e.kode));
+      const newCount = records.filter((r) => !existingKodes.has(r.kode)).length;
+      const updCount = records.length - newCount;
 
-      const toUpdate = records.filter((r) => map.has(r.kode));
-      const toInsert = records.filter((r) => !map.has(r.kode));
-
-      let okIns = 0,
-        okUpd = 0,
-        fail = 0;
-
-      if (toInsert.length) {
-        const { error } = await supabase.from("master_products").insert(toInsert);
-        if (error) fail += toInsert.length;
-        else okIns = toInsert.length;
-      }
-      for (const r of toUpdate) {
+      // Upsert dalam batch 200
+      const BATCH = 200;
+      let fail = 0;
+      for (let i = 0; i < records.length; i += BATCH) {
+        const chunk = records.slice(i, i + BATCH);
         const { error } = await supabase
           .from("master_products")
-          .update(r)
-          .eq("id", map.get(r.kode)!);
-        if (error) fail++;
-        else okUpd++;
+          .upsert(chunk, { onConflict: "kode" });
+        if (error) {
+          console.error("Upsert error:", error);
+          fail += chunk.length;
+        }
       }
 
-      toast.success(`Import selesai: ${okIns} baru, ${okUpd} diperbarui${fail ? `, ${fail} gagal` : ""}`);
+      const parts = [`${newCount} baru`, `${updCount} diperbarui`];
+      if (skippedDup) parts.push(`${skippedDup} duplikat dilewati`);
+      if (skippedEmpty) parts.push(`${skippedEmpty} baris kosong`);
+      if (fail) parts.push(`${fail} gagal`);
+      toast.success("Import selesai: " + parts.join(", "));
       load();
     } catch (e) {
       toast.error("Gagal membaca file: " + (e as Error).message);
