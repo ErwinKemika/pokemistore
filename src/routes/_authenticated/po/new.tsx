@@ -76,23 +76,24 @@ function calcSubtotal(it: Item) {
   return Math.max(0, gross - disc);
 }
 
-async function generatePoNumber(): Promise<string> {
-  const d = new Date();
-  const ym = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
-  const prefix = `PO-${ym}-`;
+async function generatePoNumber(dateStr: string): Promise<string> {
+  // dateStr: YYYY-MM-DD
+  const ymd = dateStr.replaceAll("-", "");
+  const prefix = `DO.${ymd}.`;
   const { data } = await supabase
     .from("purchase_orders")
     .select("no_po")
-    .like("no_po", `${prefix}%`)
+    .like("no_po", `${prefix}%KS`)
     .order("no_po", { ascending: false })
     .limit(1);
   let next = 1;
   if (data && data.length) {
     const last = data[0].no_po as string;
-    const n = parseInt(last.slice(prefix.length), 10);
+    const mid = last.slice(prefix.length, prefix.length + 2);
+    const n = parseInt(mid, 10);
     if (!isNaN(n)) next = n + 1;
   }
-  return `${prefix}${String(next).padStart(4, "0")}`;
+  return `${prefix}${String(next).padStart(2, "0")}KS`;
 }
 
 function PoNew() {
@@ -110,13 +111,20 @@ function PoNew() {
     (async () => {
       const [{ data: prods }, no] = await Promise.all([
         supabase.from("master_products").select("id,kode,nama_produk,kemasan,harga,disc_percent").order("kode"),
-        generatePoNumber(),
+        generatePoNumber(tglPo),
       ]);
       setProducts((prods ?? []) as Product[]);
       setNoPo(no);
       setLoadingProducts(false);
     })();
   }, []);
+
+  // Regenerate PO number when date changes
+  useEffect(() => {
+    if (loadingProducts) return;
+    generatePoNumber(tglPo).then(setNoPo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tglPo]);
 
   const update = (rowId: string, patch: Partial<Item>) => {
     setItems((prev) => prev.map((it) => (it.rowId === rowId ? { ...it, ...patch } : it)));
