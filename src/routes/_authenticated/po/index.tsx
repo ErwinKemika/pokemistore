@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -15,6 +22,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { generatePoPdf, generateSuratJalanPdf, type PoHeader, type PoItem } from "@/lib/pdf";
+
+const STATUS_OPTIONS = [
+  "draft",
+  "terkirim",
+  "diproses",
+  "diterima",
+  "ditagih",
+  "lunas",
+  "dibatalkan",
+] as const;
+
+const STATUS_COLOR: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground",
+  terkirim: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
+  diproses: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  diterima: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  ditagih: "bg-purple-500/15 text-purple-700 dark:text-purple-300",
+  lunas: "bg-primary/15 text-primary",
+  dibatalkan: "bg-destructive/15 text-destructive",
+};
 
 export const Route = createFileRoute("/_authenticated/po/")({
   component: PoIndex,
