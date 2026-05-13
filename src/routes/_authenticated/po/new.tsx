@@ -212,12 +212,8 @@ function PoNew() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => save("draft")} disabled={saving}>
+          <Button onClick={() => save("draft")} disabled={saving}>
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Simpan Draft
-          </Button>
-          <Button onClick={() => save("terkirim")} disabled={saving}>
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
             Buat PO
           </Button>
         </div>
