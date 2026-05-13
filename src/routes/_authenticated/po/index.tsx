@@ -192,7 +192,7 @@ function PoIndex() {
                 <TableHead>Tanggal</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right pr-6">Grand Total</TableHead>
-                <TableHead className="w-64 text-right">Aksi</TableHead>
+                <TableHead className="w-72 text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
