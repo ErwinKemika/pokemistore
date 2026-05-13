@@ -283,6 +283,58 @@ function PoIndex() {
           </Table>
         </div>
       </div>
+
+      <AlertDialog open={!!deleteStep1} onOpenChange={(o) => !o && setDeleteStep1(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus PO {deleteStep1?.no_po}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tindakan ini akan menghapus PO beserta seluruh itemnya. Lanjutkan ke verifikasi
+              kedua?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const po = deleteStep1;
+                setDeleteStep1(null);
+                setDeleteStep2(po);
+              }}
+            >
+              Lanjut
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteStep2} onOpenChange={(o) => !o && !deleting && setDeleteStep2(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">
+              Konfirmasi Akhir
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Yakin hapus permanen <span className="font-mono font-semibold">{deleteStep2?.no_po}</span>?
+              Data tidak dapat dikembalikan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Hapus Permanen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
