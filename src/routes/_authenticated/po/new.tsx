@@ -150,7 +150,7 @@ function PoNew() {
 
   const validItems = items.filter((it) => it.kode && it.nama_produk && it.qty > 0);
 
-  const save = async (status: "draft" | "final") => {
+  const save = async (status: "draft" | "terkirim") => {
     if (!noPo.trim()) return toast.error("Nomor PO wajib diisi");
     if (validItems.length === 0) return toast.error("Tambahkan minimal 1 item");
 
@@ -216,7 +216,7 @@ function PoNew() {
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Simpan Draft
           </Button>
-          <Button onClick={() => save("final")} disabled={saving}>
+          <Button onClick={() => save("terkirim")} disabled={saving}>
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
             Buat PO
           </Button>

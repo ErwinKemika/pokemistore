@@ -140,7 +140,7 @@ function PoIndex() {
                       <TableCell className="font-mono text-sm font-medium">{po.no_po}</TableCell>
                       <TableCell>{fmtDate(po.tgl_po)}</TableCell>
                       <TableCell>
-                        <Badge variant={po.status === "final" ? "default" : "secondary"}>
+                        <Badge variant={po.status === "draft" ? "secondary" : "default"}>
                           {po.status}
                         </Badge>
                       </TableCell>
