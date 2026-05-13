@@ -97,6 +97,21 @@ function PoIndex() {
     }
   };
 
+  const updateStatus = async (po: PoRow, status: string) => {
+    const prev = po.status;
+    setRows((rs) => rs.map((r) => (r.id === po.id ? { ...r, status } : r)));
+    const { error } = await supabase
+      .from("purchase_orders")
+      .update({ status })
+      .eq("id", po.id);
+    if (error) {
+      setRows((rs) => rs.map((r) => (r.id === po.id ? { ...r, status: prev } : r)));
+      toast.error("Gagal ubah status: " + error.message);
+    } else {
+      toast.success(`Status diubah ke "${status}"`);
+    }
+  };
+
   const filtered = rows.filter((r) =>
     !q ? true : r.no_po.toLowerCase().includes(q.toLowerCase()),
   );
