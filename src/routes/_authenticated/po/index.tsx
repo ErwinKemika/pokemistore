@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -15,6 +22,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { generatePoPdf, generateSuratJalanPdf, type PoHeader, type PoItem } from "@/lib/pdf";
+
+const STATUS_OPTIONS = [
+  "draft",
+  "terkirim",
+  "diproses",
+  "diterima",
+  "ditagih",
+  "lunas",
+  "dibatalkan",
+] as const;
+
+const STATUS_COLOR: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground",
+  terkirim: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
+  diproses: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  diterima: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  ditagih: "bg-purple-500/15 text-purple-700 dark:text-purple-300",
+  lunas: "bg-primary/15 text-primary",
+  dibatalkan: "bg-destructive/15 text-destructive",
+};
 
 export const Route = createFileRoute("/_authenticated/po/")({
   component: PoIndex,
@@ -67,6 +94,21 @@ function PoIndex() {
       toast.error("Gagal generate PDF: " + (e as Error).message);
     } finally {
       setPdfLoading(null);
+    }
+  };
+
+  const updateStatus = async (po: PoRow, status: string) => {
+    const prev = po.status;
+    setRows((rs) => rs.map((r) => (r.id === po.id ? { ...r, status } : r)));
+    const { error } = await supabase
+      .from("purchase_orders")
+      .update({ status })
+      .eq("id", po.id);
+    if (error) {
+      setRows((rs) => rs.map((r) => (r.id === po.id ? { ...r, status: prev } : r)));
+      toast.error("Gagal ubah status: " + error.message);
+    } else {
+      toast.success(`Status diubah ke "${status}"`);
     }
   };
 
@@ -140,9 +182,20 @@ function PoIndex() {
                       <TableCell className="font-mono text-sm font-medium">{po.no_po}</TableCell>
                       <TableCell>{fmtDate(po.tgl_po)}</TableCell>
                       <TableCell>
-                        <Badge variant={po.status === "draft" ? "secondary" : "default"}>
-                          {po.status}
-                        </Badge>
+                        <Select value={po.status} onValueChange={(v) => updateStatus(po, v)}>
+                          <SelectTrigger
+                            className={`h-8 w-[130px] border-0 font-medium capitalize ${STATUS_COLOR[po.status] ?? "bg-muted"}`}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STATUS_OPTIONS.map((s) => (
+                              <SelectItem key={s} value={s} className="capitalize">
+                                {s}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell className="text-right pr-6 tabular-nums font-medium">
                         {fmtIDR(po.grand_total)}
