@@ -79,7 +79,7 @@ function calcSubtotal(it: Item) {
 async function generatePoNumber(dateStr: string): Promise<string> {
   // dateStr: YYYY-MM-DD
   const ymd = dateStr.replaceAll("-", "");
-  const prefix = `DO.${ymd}.`;
+  const prefix = `PO.${ymd}.`;
   const { data } = await supabase
     .from("purchase_orders")
     .select("no_po")
