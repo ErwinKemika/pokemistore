@@ -182,9 +182,20 @@ function PoIndex() {
                       <TableCell className="font-mono text-sm font-medium">{po.no_po}</TableCell>
                       <TableCell>{fmtDate(po.tgl_po)}</TableCell>
                       <TableCell>
-                        <Badge variant={po.status === "draft" ? "secondary" : "default"}>
-                          {po.status}
-                        </Badge>
+                        <Select value={po.status} onValueChange={(v) => updateStatus(po, v)}>
+                          <SelectTrigger
+                            className={`h-8 w-[130px] border-0 font-medium capitalize ${STATUS_COLOR[po.status] ?? "bg-muted"}`}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STATUS_OPTIONS.map((s) => (
+                              <SelectItem key={s} value={s} className="capitalize">
+                                {s}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell className="text-right pr-6 tabular-nums font-medium">
                         {fmtIDR(po.grand_total)}
