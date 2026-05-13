@@ -1,6 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { FileText, Plus, Download, Truck, Loader2, Search } from "lucide-react";
+import { FileText, Plus, Download, Truck, Loader2, Search, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -60,6 +70,31 @@ function PoIndex() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [pdfLoading, setPdfLoading] = useState<string | null>(null);
+  const [deleteStep1, setDeleteStep1] = useState<PoRow | null>(null);
+  const [deleteStep2, setDeleteStep2] = useState<PoRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!deleteStep2) return;
+    setDeleting(true);
+    const po = deleteStep2;
+    const { error: e1 } = await supabase.from("po_items").delete().eq("po_id", po.id);
+    if (e1) {
+      toast.error("Gagal hapus item: " + e1.message);
+      setDeleting(false);
+      return;
+    }
+    const { error: e2 } = await supabase.from("purchase_orders").delete().eq("id", po.id);
+    if (e2) {
+      toast.error("Gagal hapus PO: " + e2.message);
+      setDeleting(false);
+      return;
+    }
+    setRows((rs) => rs.filter((r) => r.id !== po.id));
+    toast.success(`PO ${po.no_po} dihapus`);
+    setDeleting(false);
+    setDeleteStep2(null);
+  };
 
   useEffect(() => {
     (async () => {
@@ -157,7 +192,7 @@ function PoIndex() {
                 <TableHead>Tanggal</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right pr-6">Grand Total</TableHead>
-                <TableHead className="w-64 text-right">Aksi</TableHead>
+                <TableHead className="w-72 text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -228,6 +263,16 @@ function PoIndex() {
                             )}
                             Surat Jalan
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            onClick={() => setDeleteStep1(po)}
+                            disabled={loadingPo || loadingSj}
+                            aria-label="Hapus PO"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -238,6 +283,58 @@ function PoIndex() {
           </Table>
         </div>
       </div>
+
+      <AlertDialog open={!!deleteStep1} onOpenChange={(o) => !o && setDeleteStep1(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus PO {deleteStep1?.no_po}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tindakan ini akan menghapus PO beserta seluruh itemnya. Lanjutkan ke verifikasi
+              kedua?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const po = deleteStep1;
+                setDeleteStep1(null);
+                setDeleteStep2(po);
+              }}
+            >
+              Lanjut
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteStep2} onOpenChange={(o) => !o && !deleting && setDeleteStep2(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">
+              Konfirmasi Akhir
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Yakin hapus permanen <span className="font-mono font-semibold">{deleteStep2?.no_po}</span>?
+              Data tidak dapat dikembalikan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Hapus Permanen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
