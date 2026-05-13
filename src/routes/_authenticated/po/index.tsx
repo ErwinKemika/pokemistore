@@ -70,6 +70,31 @@ function PoIndex() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [pdfLoading, setPdfLoading] = useState<string | null>(null);
+  const [deleteStep1, setDeleteStep1] = useState<PoRow | null>(null);
+  const [deleteStep2, setDeleteStep2] = useState<PoRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!deleteStep2) return;
+    setDeleting(true);
+    const po = deleteStep2;
+    const { error: e1 } = await supabase.from("po_items").delete().eq("po_id", po.id);
+    if (e1) {
+      toast.error("Gagal hapus item: " + e1.message);
+      setDeleting(false);
+      return;
+    }
+    const { error: e2 } = await supabase.from("purchase_orders").delete().eq("id", po.id);
+    if (e2) {
+      toast.error("Gagal hapus PO: " + e2.message);
+      setDeleting(false);
+      return;
+    }
+    setRows((rs) => rs.filter((r) => r.id !== po.id));
+    toast.success(`PO ${po.no_po} dihapus`);
+    setDeleting(false);
+    setDeleteStep2(null);
+  };
 
   useEffect(() => {
     (async () => {
