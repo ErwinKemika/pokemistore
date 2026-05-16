@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FileText, Plus, Download, Truck, Loader2, Search, Trash2, Eye, ChevronDown } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,6 +80,17 @@ function PoIndex() {
   const [deleteStep1, setDeleteStep1] = useState<PoRow | null>(null);
   const [deleteStep2, setDeleteStep2] = useState<PoRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState("");
+  const prevUrlRef = useRef<string | null>(null);
+
+  const closePreview = () => {
+    if (prevUrlRef.current) {
+      URL.revokeObjectURL(prevUrlRef.current);
+      prevUrlRef.current = null;
+    }
+    setPreviewUrl(null);
+  };
 
   const handleDelete = async () => {
     if (!deleteStep2) return;
@@ -129,8 +141,21 @@ function PoIndex() {
         toast.error("PO tidak memiliki item");
         return;
       }
-      if (kind === "po") await generatePoPdf(po, items, mode);
-      else await generateSuratJalanPdf(po, items, mode);
+      if (kind === "po") {
+        const url = await generatePoPdf(po, items, mode);
+        if (mode === "preview" && url) {
+          prevUrlRef.current = url;
+          setPreviewTitle(`PO — ${po.no_po}`);
+          setPreviewUrl(url);
+        }
+      } else {
+        const url = await generateSuratJalanPdf(po, items, mode);
+        if (mode === "preview" && url) {
+          prevUrlRef.current = url;
+          setPreviewTitle(`Surat Jalan — ${po.no_po}`);
+          setPreviewUrl(url);
+        }
+      }
     } catch (e) {
       toast.error("Gagal generate PDF: " + (e as Error).message);
     } finally {
@@ -357,6 +382,23 @@ function PoIndex() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!previewUrl} onOpenChange={(o) => !o && closePreview()}>
+        <DialogContent
+          className="max-w-3xl w-[92vw] h-[85vh] p-0 gap-0 overflow-hidden flex flex-col"
+        >
+          <div className="flex items-center border-b px-4 py-2.5 pr-12">
+            <p className="text-sm font-semibold truncate">{previewTitle}</p>
+          </div>
+          {previewUrl && (
+            <iframe
+              src={previewUrl}
+              title={previewTitle}
+              className="flex-1 w-full border-0 bg-muted"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
