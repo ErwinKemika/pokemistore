@@ -141,8 +141,21 @@ function PoIndex() {
         toast.error("PO tidak memiliki item");
         return;
       }
-      if (kind === "po") await generatePoPdf(po, items, mode);
-      else await generateSuratJalanPdf(po, items, mode);
+      if (kind === "po") {
+        const url = await generatePoPdf(po, items, mode);
+        if (mode === "preview" && url) {
+          prevUrlRef.current = url;
+          setPreviewTitle(`PO — ${po.no_po}`);
+          setPreviewUrl(url);
+        }
+      } else {
+        const url = await generateSuratJalanPdf(po, items, mode);
+        if (mode === "preview" && url) {
+          prevUrlRef.current = url;
+          setPreviewTitle(`Surat Jalan — ${po.no_po}`);
+          setPreviewUrl(url);
+        }
+      }
     } catch (e) {
       toast.error("Gagal generate PDF: " + (e as Error).message);
     } finally {
