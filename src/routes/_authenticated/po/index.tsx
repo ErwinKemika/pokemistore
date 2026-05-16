@@ -115,7 +115,7 @@ function PoIndex() {
     })();
   }, []);
 
-  const handlePdf = async (po: PoRow, kind: "po" | "sj") => {
+  const handlePdf = async (po: PoRow, kind: "po" | "sj", mode: "download" | "preview") => {
     setPdfLoading(`${po.id}-${kind}`);
     try {
       const { data, error } = await supabase
@@ -129,8 +129,8 @@ function PoIndex() {
         toast.error("PO tidak memiliki item");
         return;
       }
-      if (kind === "po") generatePoPdf(po, items);
-      else generateSuratJalanPdf(po, items);
+      if (kind === "po") await generatePoPdf(po, items, mode);
+      else await generateSuratJalanPdf(po, items, mode);
     } catch (e) {
       toast.error("Gagal generate PDF: " + (e as Error).message);
     } finally {
