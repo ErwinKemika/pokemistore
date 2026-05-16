@@ -343,10 +343,10 @@ export async function generatePoPdf(po: PoHeader, items: PoItem[], mode: "downlo
   drawFooter(doc, po.no_po);
 
   if (mode === "preview") {
-    window.open(doc.output("bloburl"), "_blank");
-  } else {
-    doc.save(`PO_${po.no_po}.pdf`);
+    return doc.output("bloburl") as unknown as string;
   }
+  doc.save(`PO_${po.no_po}.pdf`);
+  return null;
 }
 
 export async function generateSuratJalanPdf(po: PoHeader, items: PoItem[], mode: "download" | "preview" = "download") {
