@@ -257,7 +257,8 @@ function drawFooter(doc: jsPDF, noPo: string) {
   doc.text(noPo, pageW - 14, y + 15, { align: "right" });
 }
 
-export function generatePoPdf(po: PoHeader, items: PoItem[]) {
+export async function generatePoPdf(po: PoHeader, items: PoItem[]) {
+  const sig = await loadSignature();
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   drawHeader(doc, "PURCHASE ORDER", "SURAT PESANAN", MUTED);
 
