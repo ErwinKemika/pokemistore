@@ -257,7 +257,7 @@ function drawFooter(doc: jsPDF, noPo: string) {
   doc.text(noPo, pageW - 14, y + 15, { align: "right" });
 }
 
-export async function generatePoPdf(po: PoHeader, items: PoItem[]) {
+export async function generatePoPdf(po: PoHeader, items: PoItem[], mode: "download" | "preview" = "download") {
   const sig = await loadSignature();
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   drawHeader(doc, "PURCHASE ORDER", "SURAT PESANAN", MUTED);
@@ -342,10 +342,14 @@ export async function generatePoPdf(po: PoHeader, items: PoItem[]) {
   drawSignatures(doc, afterCat + 14, po.tgl_po, "Pemohon", "Mengetahui", sig);
   drawFooter(doc, po.no_po);
 
-  doc.save(`PO_${po.no_po}.pdf`);
+  if (mode === "preview") {
+    window.open(doc.output("bloburl"), "_blank");
+  } else {
+    doc.save(`PO_${po.no_po}.pdf`);
+  }
 }
 
-export async function generateSuratJalanPdf(po: PoHeader, items: PoItem[]) {
+export async function generateSuratJalanPdf(po: PoHeader, items: PoItem[], mode: "download" | "preview" = "download") {
   const sig = await loadSignature();
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   drawHeader(doc, "SURAT JALAN", "SEMENTARA", ORANGE);
@@ -410,5 +414,9 @@ export async function generateSuratJalanPdf(po: PoHeader, items: PoItem[]) {
   drawSignatures(doc, afterCat + 14, po.tgl_po, "Pengirim", "Penerima", sig);
   drawFooter(doc, po.no_po);
 
-  doc.save(`SJ_${po.no_po}.pdf`);
+  if (mode === "preview") {
+    window.open(doc.output("bloburl"), "_blank");
+  } else {
+    doc.save(`SJ_${po.no_po}.pdf`);
+  }
 }
