@@ -345,7 +345,8 @@ export async function generatePoPdf(po: PoHeader, items: PoItem[]) {
   doc.save(`PO_${po.no_po}.pdf`);
 }
 
-export function generateSuratJalanPdf(po: PoHeader, items: PoItem[]) {
+export async function generateSuratJalanPdf(po: PoHeader, items: PoItem[]) {
+  const sig = await loadSignature();
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   drawHeader(doc, "SURAT JALAN", "SEMENTARA", ORANGE);
 
