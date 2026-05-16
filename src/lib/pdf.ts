@@ -183,22 +183,46 @@ function drawSignatures(
   tglPo: string,
   leftLabel: string,
   rightLabel: string,
+  signatureDataUrl: string,
 ) {
   const pageW = doc.internal.pageSize.getWidth();
   const leftX = pageW * 0.28;
   const rightX = pageW * 0.72;
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(...MUTED);
-  doc.text(`Tgl: ${fmtDate(tglPo)}`, leftX, y, { align: "center" });
-  doc.text("Tgl: ____________", rightX, y, { align: "center" });
-
+  // Top labels
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setTextColor(...BLACK);
-  doc.text(leftLabel, leftX, y + 6, { align: "center" });
-  doc.text(rightLabel, rightX, y + 6, { align: "center" });
+  doc.text(leftLabel, leftX, y, { align: "center" });
+  doc.text(rightLabel, rightX, y, { align: "center" });
+
+  // Signature image (left only)
+  try {
+    const imgW = 30;
+    const imgH = 16;
+    doc.addImage(signatureDataUrl, "PNG", leftX - imgW / 2, y + 3, imgW, imgH);
+  } catch {
+    // ignore image errors
+  }
+
+  // Signature underline
+  doc.setDrawColor(...BLACK);
+  doc.setLineWidth(0.3);
+  doc.line(leftX - 22, y + 22, leftX + 22, y + 22);
+  doc.line(rightX - 22, y + 22, rightX + 22, y + 22);
+
+  // Printed name (left) / blank (right)
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...BLACK);
+  doc.text(SIGNER_NAME, leftX, y + 27, { align: "center" });
+
+  // Date below
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...MUTED);
+  doc.text(`Tgl: ${fmtDate(tglPo)}`, leftX, y + 32, { align: "center" });
+  doc.text("Tgl: ____________", rightX, y + 32, { align: "center" });
 }
 
 function drawFooter(doc: jsPDF, noPo: string) {
