@@ -414,5 +414,9 @@ export async function generateSuratJalanPdf(po: PoHeader, items: PoItem[], mode:
   drawSignatures(doc, afterCat + 14, po.tgl_po, "Pengirim", "Penerima", sig);
   drawFooter(doc, po.no_po);
 
-  doc.save(`SJ_${po.no_po}.pdf`);
+  if (mode === "preview") {
+    window.open(doc.output("bloburl"), "_blank");
+  } else {
+    doc.save(`SJ_${po.no_po}.pdf`);
+  }
 }
