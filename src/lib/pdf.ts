@@ -1,5 +1,22 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import signatureUrl from "@/assets/signature.png";
+
+const SIGNER_NAME = "Hilmi Atsauri";
+
+let _sigDataUrl: string | null = null;
+async function loadSignature(): Promise<string> {
+  if (_sigDataUrl) return _sigDataUrl;
+  const res = await fetch(signatureUrl);
+  const blob = await res.blob();
+  _sigDataUrl = await new Promise<string>((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result as string);
+    fr.onerror = reject;
+    fr.readAsDataURL(blob);
+  });
+  return _sigDataUrl;
+}
 
 export type PoHeader = {
   no_po: string;
@@ -166,22 +183,46 @@ function drawSignatures(
   tglPo: string,
   leftLabel: string,
   rightLabel: string,
+  signatureDataUrl: string,
 ) {
   const pageW = doc.internal.pageSize.getWidth();
   const leftX = pageW * 0.28;
   const rightX = pageW * 0.72;
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(...MUTED);
-  doc.text(`Tgl: ${fmtDate(tglPo)}`, leftX, y, { align: "center" });
-  doc.text("Tgl: ____________", rightX, y, { align: "center" });
-
+  // Top labels
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setTextColor(...BLACK);
-  doc.text(leftLabel, leftX, y + 6, { align: "center" });
-  doc.text(rightLabel, rightX, y + 6, { align: "center" });
+  doc.text(leftLabel, leftX, y, { align: "center" });
+  doc.text(rightLabel, rightX, y, { align: "center" });
+
+  // Signature image (left only)
+  try {
+    const imgW = 30;
+    const imgH = 16;
+    doc.addImage(signatureDataUrl, "PNG", leftX - imgW / 2, y + 3, imgW, imgH);
+  } catch {
+    // ignore image errors
+  }
+
+  // Signature underline
+  doc.setDrawColor(...BLACK);
+  doc.setLineWidth(0.3);
+  doc.line(leftX - 22, y + 22, leftX + 22, y + 22);
+  doc.line(rightX - 22, y + 22, rightX + 22, y + 22);
+
+  // Printed name (left) / blank (right)
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...BLACK);
+  doc.text(SIGNER_NAME, leftX, y + 27, { align: "center" });
+
+  // Date below
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...MUTED);
+  doc.text(`Tgl: ${fmtDate(tglPo)}`, leftX, y + 32, { align: "center" });
+  doc.text("Tgl: ____________", rightX, y + 32, { align: "center" });
 }
 
 function drawFooter(doc: jsPDF, noPo: string) {
@@ -216,7 +257,8 @@ function drawFooter(doc: jsPDF, noPo: string) {
   doc.text(noPo, pageW - 14, y + 15, { align: "right" });
 }
 
-export function generatePoPdf(po: PoHeader, items: PoItem[]) {
+export async function generatePoPdf(po: PoHeader, items: PoItem[]) {
+  const sig = await loadSignature();
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   drawHeader(doc, "PURCHASE ORDER", "SURAT PESANAN", MUTED);
 
@@ -297,13 +339,14 @@ export function generatePoPdf(po: PoHeader, items: PoItem[]) {
 
   const afterSum = sy + 11 + 6;
   const afterCat = drawCatatan(doc, afterSum, po.catatan);
-  drawSignatures(doc, afterCat + 18, po.tgl_po, "Pemohon", "Mengetahui");
+  drawSignatures(doc, afterCat + 14, po.tgl_po, "Pemohon", "Mengetahui", sig);
   drawFooter(doc, po.no_po);
 
   doc.save(`PO_${po.no_po}.pdf`);
 }
 
-export function generateSuratJalanPdf(po: PoHeader, items: PoItem[]) {
+export async function generateSuratJalanPdf(po: PoHeader, items: PoItem[]) {
+  const sig = await loadSignature();
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   drawHeader(doc, "SURAT JALAN", "SEMENTARA", ORANGE);
 
@@ -364,7 +407,7 @@ export function generateSuratJalanPdf(po: PoHeader, items: PoItem[]) {
 
   const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
   const afterCat = drawCatatan(doc, finalY, po.catatan);
-  drawSignatures(doc, afterCat + 18, po.tgl_po, "Pengirim", "Penerima");
+  drawSignatures(doc, afterCat + 14, po.tgl_po, "Pengirim", "Penerima", sig);
   drawFooter(doc, po.no_po);
 
   doc.save(`SJ_${po.no_po}.pdf`);
