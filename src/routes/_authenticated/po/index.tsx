@@ -243,32 +243,48 @@ function PoIndex() {
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handlePdf(po, "po")}
-                            disabled={loadingPo || loadingSj}
-                          >
-                            {loadingPo ? (
-                              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Download className="mr-2 h-3.5 w-3.5" />
-                            )}
-                            PO
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handlePdf(po, "sj")}
-                            disabled={loadingPo || loadingSj}
-                          >
-                            {loadingSj ? (
-                              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Truck className="mr-2 h-3.5 w-3.5" />
-                            )}
-                            Surat Jalan
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" variant="outline" disabled={loadingPo || loadingSj}>
+                                {loadingPo ? (
+                                  <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <FileText className="mr-1 h-3.5 w-3.5" />
+                                )}
+                                PO
+                                <ChevronDown className="ml-1 h-3 w-3 opacity-60" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handlePdf(po, "po", "preview")}>
+                                <Eye className="mr-2 h-4 w-4" /> Review
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handlePdf(po, "po", "download")}>
+                                <Download className="mr-2 h-4 w-4" /> Unduh
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" variant="outline" disabled={loadingPo || loadingSj}>
+                                {loadingSj ? (
+                                  <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Truck className="mr-1 h-3.5 w-3.5" />
+                                )}
+                                Surat Jalan
+                                <ChevronDown className="ml-1 h-3 w-3 opacity-60" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handlePdf(po, "sj", "preview")}>
+                                <Eye className="mr-2 h-4 w-4" /> Review
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handlePdf(po, "sj", "download")}>
+                                <Download className="mr-2 h-4 w-4" /> Unduh
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                           <Button
                             size="sm"
                             variant="outline"
