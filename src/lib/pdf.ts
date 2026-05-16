@@ -339,7 +339,7 @@ export async function generatePoPdf(po: PoHeader, items: PoItem[]) {
 
   const afterSum = sy + 11 + 6;
   const afterCat = drawCatatan(doc, afterSum, po.catatan);
-  drawSignatures(doc, afterCat + 18, po.tgl_po, "Pemohon", "Mengetahui");
+  drawSignatures(doc, afterCat + 14, po.tgl_po, "Pemohon", "Mengetahui", sig);
   drawFooter(doc, po.no_po);
 
   doc.save(`PO_${po.no_po}.pdf`);
