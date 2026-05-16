@@ -1,5 +1,22 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import signatureUrl from "@/assets/signature.png";
+
+const SIGNER_NAME = "Hilmi Atsauri";
+
+let _sigDataUrl: string | null = null;
+async function loadSignature(): Promise<string> {
+  if (_sigDataUrl) return _sigDataUrl;
+  const res = await fetch(signatureUrl);
+  const blob = await res.blob();
+  _sigDataUrl = await new Promise<string>((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result as string);
+    fr.onerror = reject;
+    fr.readAsDataURL(blob);
+  });
+  return _sigDataUrl;
+}
 
 export type PoHeader = {
   no_po: string;
