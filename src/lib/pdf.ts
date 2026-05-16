@@ -342,7 +342,11 @@ export async function generatePoPdf(po: PoHeader, items: PoItem[], mode: "downlo
   drawSignatures(doc, afterCat + 14, po.tgl_po, "Pemohon", "Mengetahui", sig);
   drawFooter(doc, po.no_po);
 
-  doc.save(`PO_${po.no_po}.pdf`);
+  if (mode === "preview") {
+    window.open(doc.output("bloburl"), "_blank");
+  } else {
+    doc.save(`PO_${po.no_po}.pdf`);
+  }
 }
 
 export async function generateSuratJalanPdf(po: PoHeader, items: PoItem[]) {
