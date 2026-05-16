@@ -385,18 +385,10 @@ function PoIndex() {
 
       <Dialog open={!!previewUrl} onOpenChange={(o) => !o && closePreview()}>
         <DialogContent
-          showCloseButton={false}
           className="max-w-3xl w-[92vw] h-[85vh] p-0 gap-0 overflow-hidden flex flex-col"
         >
-          <div className="flex items-center justify-between border-b px-4 py-2.5">
+          <div className="flex items-center border-b px-4 py-2.5 pr-12">
             <p className="text-sm font-semibold truncate">{previewTitle}</p>
-            <button
-              onClick={closePreview}
-              className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-              aria-label="Tutup preview"
-            >
-              <X className="h-4 w-4" />
-            </button>
           </div>
           {previewUrl && (
             <iframe
