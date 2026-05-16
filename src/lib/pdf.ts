@@ -407,7 +407,7 @@ export async function generateSuratJalanPdf(po: PoHeader, items: PoItem[]) {
 
   const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
   const afterCat = drawCatatan(doc, finalY, po.catatan);
-  drawSignatures(doc, afterCat + 18, po.tgl_po, "Pengirim", "Penerima");
+  drawSignatures(doc, afterCat + 14, po.tgl_po, "Pengirim", "Penerima", sig);
   drawFooter(doc, po.no_po);
 
   doc.save(`SJ_${po.no_po}.pdf`);
