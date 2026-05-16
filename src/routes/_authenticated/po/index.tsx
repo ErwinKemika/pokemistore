@@ -80,6 +80,17 @@ function PoIndex() {
   const [deleteStep1, setDeleteStep1] = useState<PoRow | null>(null);
   const [deleteStep2, setDeleteStep2] = useState<PoRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState("");
+  const prevUrlRef = useRef<string | null>(null);
+
+  const closePreview = () => {
+    if (prevUrlRef.current) {
+      URL.revokeObjectURL(prevUrlRef.current);
+      prevUrlRef.current = null;
+    }
+    setPreviewUrl(null);
+  };
 
   const handleDelete = async () => {
     if (!deleteStep2) return;
