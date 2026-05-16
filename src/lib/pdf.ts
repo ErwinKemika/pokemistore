@@ -415,8 +415,8 @@ export async function generateSuratJalanPdf(po: PoHeader, items: PoItem[], mode:
   drawFooter(doc, po.no_po);
 
   if (mode === "preview") {
-    window.open(doc.output("bloburl"), "_blank");
-  } else {
-    doc.save(`SJ_${po.no_po}.pdf`);
+    return doc.output("bloburl") as unknown as string;
   }
+  doc.save(`SJ_${po.no_po}.pdf`);
+  return null;
 }
