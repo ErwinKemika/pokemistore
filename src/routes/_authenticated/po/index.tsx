@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { FileText, Plus, Download, Truck, Loader2, Search, Trash2, Eye, ChevronDown } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { FileText, Plus, Download, Truck, Loader2, Search, Trash2, Eye, ChevronDown, X } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
