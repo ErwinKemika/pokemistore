@@ -435,7 +435,8 @@ export async function generateSuratJalanPdf(po: PoHeader, items: PoItem[], mode:
 
   const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
   const afterCat = drawCatatan(doc, finalY, po.catatan);
-  drawSignatures(doc, afterCat + 14, po.tgl_po, "Pengirim", "Penerima", sig);
+  void sig;
+  drawSignaturesSJ(doc, afterCat + 14, po.tgl_po);
   drawFooter(doc, po.no_po);
 
   if (mode === "preview") {
