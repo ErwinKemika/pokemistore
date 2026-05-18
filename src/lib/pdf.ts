@@ -177,6 +177,30 @@ function drawCatatan(doc: jsPDF, y: number, catatan: string | null): number {
   return y + h;
 }
 
+function drawSignaturesSJ(doc: jsPDF, y: number, tglPo: string) {
+  const pageW = doc.internal.pageSize.getWidth();
+  const cols = [
+    { x: pageW * 0.2, label: "Menyetujui", date: fmtDate(tglPo) },
+    { x: pageW * 0.5, label: "Mengetahui", date: fmtDate(tglPo) },
+    { x: pageW * 0.8, label: "Penerima", date: "" },
+  ];
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...BLACK);
+  cols.forEach((c) => doc.text(c.label, c.x, y, { align: "center" }));
+
+  doc.setDrawColor(...BLACK);
+  doc.setLineWidth(0.3);
+  cols.forEach((c) => doc.line(c.x - 22, y + 22, c.x + 22, y + 22));
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...MUTED);
+  cols.forEach((c) =>
+    doc.text(c.date ? `Tgl: ${c.date}` : "Tgl: ____________", c.x, y + 27, { align: "center" }),
+  );
+}
+
 function drawSignatures(
   doc: jsPDF,
   y: number,
@@ -411,7 +435,8 @@ export async function generateSuratJalanPdf(po: PoHeader, items: PoItem[], mode:
 
   const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
   const afterCat = drawCatatan(doc, finalY, po.catatan);
-  drawSignatures(doc, afterCat + 14, po.tgl_po, "Pengirim", "Penerima", sig);
+  void sig;
+  drawSignaturesSJ(doc, afterCat + 14, po.tgl_po);
   drawFooter(doc, po.no_po);
 
   if (mode === "preview") {
