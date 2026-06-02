@@ -182,7 +182,7 @@ function drawSignaturesSJ(doc: jsPDF, y: number, tglPo: string) {
   const cols = [
     { x: pageW * 0.2, label: "Menyetujui", date: fmtDate(tglPo) },
     { x: pageW * 0.5, label: "Mengetahui", date: fmtDate(tglPo) },
-    { x: pageW * 0.8, label: "Penerima", date: "" },
+    { x: pageW * 0.8, label: "Pengirim (Gudang)", date: "" },
   ];
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
