@@ -264,11 +264,17 @@ function PoIndex() {
             Cetak PO atau Surat Jalan dalam format PDF
           </p>
         </div>
-        <Button asChild>
-          <Link to="/po/new">
-            <Plus className="mr-2 h-4 w-4" /> Buat PO Baru
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportCsv} disabled={exporting || loading}>
+            {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+            Export CSV
+          </Button>
+          <Button asChild>
+            <Link to="/po/new">
+              <Plus className="mr-2 h-4 w-4" /> Buat PO Baru
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-xl border bg-card">
