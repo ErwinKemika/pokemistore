@@ -103,7 +103,7 @@ function PoNew() {
   const [noPo, setNoPo] = useState("");
   const [tglPo, setTglPo] = useState(today());
   const [catatan, setCatatan] = useState("");
-  const [includePpn, setIncludePpn] = useState(false);
+  const [includePpn, setIncludePpn] = useState(true);
   const [items, setItems] = useState<Item[]>([newRow()]);
   const [saving, setSaving] = useState(false);
 
