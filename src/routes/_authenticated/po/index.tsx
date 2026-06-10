@@ -93,6 +93,75 @@ function PoIndex() {
     setPreviewUrl(null);
   };
 
+  const handleExportCsv = async () => {
+    if (filtered.length === 0) {
+      toast.error("Tidak ada data untuk diexport");
+      return;
+    }
+    setExporting(true);
+    try {
+      const ids = filtered.map((r) => r.id);
+      const { data, error } = await supabase
+        .from("po_items")
+        .select("po_id,no_item,kode,nama_produk,kemasan,qty,harga,subtotal")
+        .in("po_id", ids)
+        .order("no_item");
+      if (error) throw error;
+      const byPo = new Map<string, PoRow>();
+      filtered.forEach((p) => byPo.set(p.id, p));
+      const rowsItems = (data ?? []).slice().sort((a, b) => {
+        const pa = byPo.get(a.po_id as string);
+        const pb = byPo.get(b.po_id as string);
+        if (!pa || !pb) return 0;
+        if (pa.tgl_po !== pb.tgl_po) return pa.tgl_po < pb.tgl_po ? 1 : -1;
+        if (pa.no_po !== pb.no_po) return pa.no_po < pb.no_po ? 1 : -1;
+        return (a.no_item as number) - (b.no_item as number);
+      });
+      const headers = [
+        "No","Tanggal PO","Nomor PO","Status PO","Kode Barang","Nama Barang","Vol","Unit","Harga Satuan","Harga Total Barang",
+      ];
+      const esc = (v: unknown) => {
+        const s = v == null ? "" : String(v);
+        return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+      const lines = [headers.join(",")];
+      rowsItems.forEach((it, idx) => {
+        const po = byPo.get(it.po_id as string);
+        if (!po) return;
+        lines.push([
+          idx + 1,
+          po.tgl_po,
+          po.no_po,
+          po.status.charAt(0).toUpperCase() + po.status.slice(1),
+          it.kode,
+          it.nama_produk,
+          it.qty,
+          it.kemasan ?? "",
+          Math.round(Number(it.harga) || 0),
+          Math.round(Number(it.subtotal) || 0),
+        ].map(esc).join(","));
+      });
+      const csv = "\uFEFF" + lines.join("\r\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const fname = `riwayat-po-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.csv`;
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fname;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(`CSV diexport: ${fname}`);
+    } catch (e) {
+      toast.error("Gagal export CSV: " + (e as Error).message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteStep2) return;
     setDeleting(true);
