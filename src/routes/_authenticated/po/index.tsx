@@ -81,6 +81,7 @@ function PoIndex() {
   const [deleteStep2, setDeleteStep2] = useState<PoRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const [previewTitle, setPreviewTitle] = useState("");
   const prevUrlRef = useRef<string | null>(null);
 
