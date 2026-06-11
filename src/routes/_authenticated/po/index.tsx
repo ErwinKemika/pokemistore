@@ -105,23 +105,73 @@ function PoIndex() {
     setPreviewUrl(null);
   };
 
+  // Compute POs that match modal selection (for preview & export)
+  const selectedPos = useMemo(() => {
+    if (exportMode === "all") return rows;
+    if (!dateFrom || !dateTo) return [];
+    return rows.filter((r) => {
+      if (r.tgl_po < dateFrom || r.tgl_po > dateTo) return false;
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      return true;
+    });
+  }, [rows, exportMode, dateFrom, dateTo, statusFilter]);
+
+  const [previewCount, setPreviewCount] = useState<{ items: number; loading: boolean }>({ items: 0, loading: false });
+
+  useEffect(() => {
+    if (!exportOpen) return;
+    if (selectedPos.length === 0) {
+      setPreviewCount({ items: 0, loading: false });
+      return;
+    }
+    let cancelled = false;
+    setPreviewCount((p) => ({ ...p, loading: true }));
+    (async () => {
+      const { count } = await supabase
+        .from("po_items")
+        .select("id", { count: "exact", head: true })
+        .in("po_id", selectedPos.map((p) => p.id));
+      if (!cancelled) setPreviewCount({ items: count ?? 0, loading: false });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [exportOpen, selectedPos]);
+
+  const dateRangeInvalid = exportMode === "range" && (!dateFrom || !dateTo || dateFrom > dateTo);
+
   const handleExportCsv = async () => {
-    if (filtered.length === 0) {
-      toast.error("Tidak ada data untuk diexport");
+    if (exportMode === "range") {
+      if (!dateFrom || !dateTo) {
+        toast.error("Tanggal Mulai dan Tanggal Akhir wajib diisi");
+        return;
+      }
+      if (dateFrom > dateTo) {
+        toast.error("Tanggal Mulai tidak boleh lebih besar dari Tanggal Akhir");
+        return;
+      }
+    }
+    if (selectedPos.length === 0) {
+      toast.error("Tidak ada data PO pada periode/filter yang dipilih.");
       return;
     }
     setExporting(true);
     try {
-      const ids = filtered.map((r) => r.id);
+      const ids = selectedPos.map((r) => r.id);
       const { data, error } = await supabase
         .from("po_items")
-        .select("po_id,no_item,kode,nama_produk,kemasan,qty,harga,subtotal")
+        .select("id,po_id,no_item,kode,nama_produk,kemasan,qty,harga,subtotal")
         .in("po_id", ids)
         .order("no_item");
       if (error) throw error;
+      const items = data ?? [];
+      if (items.length === 0) {
+        toast.error("Tidak ada data PO pada periode/filter yang dipilih.");
+        return;
+      }
       const byPo = new Map<string, PoRow>();
-      filtered.forEach((p) => byPo.set(p.id, p));
-      const rowsItems = (data ?? []).slice().sort((a, b) => {
+      selectedPos.forEach((p) => byPo.set(p.id, p));
+      const rowsItems = items.slice().sort((a, b) => {
         const pa = byPo.get(a.po_id as string);
         const pb = byPo.get(b.po_id as string);
         if (!pa || !pb) return 0;
@@ -130,7 +180,7 @@ function PoIndex() {
         return (a.no_item as number) - (b.no_item as number);
       });
       const headers = [
-        "No","Tanggal PO","Nomor PO","Status PO","Kode Barang","Nama Barang","Vol","Unit","Harga Satuan","Harga Total Barang",
+        "No","Tanggal PO","Nomor PO","ID Detail PO","Status PO","Kode Barang","Nama Barang","Vol","Unit","Harga Satuan","Harga Total Barang",
       ];
       const esc = (v: unknown) => {
         const s = v == null ? "" : String(v);
@@ -144,6 +194,7 @@ function PoIndex() {
           idx + 1,
           po.tgl_po,
           po.no_po,
+          (it as { id?: string }).id ?? it.no_item,
           po.status.charAt(0).toUpperCase() + po.status.slice(1),
           it.kode,
           it.nama_produk,
@@ -158,7 +209,11 @@ function PoIndex() {
       const url = URL.createObjectURL(blob);
       const now = new Date();
       const pad = (n: number) => String(n).padStart(2, "0");
-      const fname = `riwayat-po-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.csv`;
+      const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
+      const compact = (d: string) => d.replace(/-/g, "");
+      const fname = exportMode === "all"
+        ? `riwayat-po-seluruh-data-${stamp}.csv`
+        : `riwayat-po-${compact(dateFrom)}-sampai-${compact(dateTo)}.csv`;
       const a = document.createElement("a");
       a.href = url;
       a.download = fname;
@@ -167,12 +222,14 @@ function PoIndex() {
       a.remove();
       URL.revokeObjectURL(url);
       toast.success(`CSV diexport: ${fname}`);
+      setExportOpen(false);
     } catch (e) {
       toast.error("Gagal export CSV: " + (e as Error).message);
     } finally {
       setExporting(false);
     }
   };
+
 
   const handleDelete = async () => {
     if (!deleteStep2) return;
