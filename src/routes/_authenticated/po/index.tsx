@@ -334,8 +334,8 @@ function PoIndex() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExportCsv} disabled={exporting || loading}>
-            {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+          <Button variant="outline" onClick={() => setExportOpen(true)} disabled={loading}>
+            <FileDown className="mr-2 h-4 w-4" />
             Export CSV
           </Button>
           <Button asChild>
