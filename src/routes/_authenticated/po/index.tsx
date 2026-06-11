@@ -87,6 +87,16 @@ function PoIndex() {
   const [previewTitle, setPreviewTitle] = useState("");
   const prevUrlRef = useRef<string | null>(null);
 
+  // Export modal state
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const firstOfMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportMode, setExportMode] = useState<"range" | "all">("range");
+  const [dateFrom, setDateFrom] = useState(firstOfMonth);
+  const [dateTo, setDateTo] = useState(todayStr);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
   const closePreview = () => {
     if (prevUrlRef.current) {
       URL.revokeObjectURL(prevUrlRef.current);
