@@ -528,6 +528,85 @@ function PoIndex() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <Dialog open={exportOpen} onOpenChange={(o) => !exporting && setExportOpen(o)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Export CSV Riwayat PO</DialogTitle>
+            <DialogDescription>Pilih data yang ingin diunduh.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <RadioGroup value={exportMode} onValueChange={(v) => setExportMode(v as "range" | "all")} className="space-y-2">
+              <div className="flex items-start gap-2 rounded-md border p-3">
+                <RadioGroupItem value="range" id="opt-range" className="mt-1" />
+                <div className="flex-1 space-y-3">
+                  <Label htmlFor="opt-range" className="font-medium cursor-pointer">Berdasarkan Rentang Tanggal</Label>
+                  {exportMode === "range" && (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Tanggal Mulai</Label>
+                          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Tanggal Akhir</Label>
+                          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Status PO</Label>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Semua Status</SelectItem>
+                            <SelectItem value="draft">Draft</SelectItem>
+                            <SelectItem value="diproses">Diproses</SelectItem>
+                            <SelectItem value="diterima">Diterima</SelectItem>
+                            <SelectItem value="lunas">Lunas</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {dateRangeInvalid && (
+                        <p className="text-xs text-destructive">Tanggal Mulai tidak boleh lebih besar dari Tanggal Akhir.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-start gap-2 rounded-md border p-3">
+                <RadioGroupItem value="all" id="opt-all" className="mt-1" />
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="opt-all" className="font-medium cursor-pointer">Seluruh Riwayat PO</Label>
+                  {exportMode === "all" && (
+                    <div className="flex gap-2 rounded-md bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300">
+                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span>Export seluruh riwayat PO akan mengunduh semua data PO dari awal. Gunakan opsi ini hanya jika data lokal/Excel hilang atau ingin melakukan backup ulang seluruh data.</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </RadioGroup>
+
+            <div className="rounded-md bg-muted/50 p-3 text-sm space-y-1">
+              <div className="font-medium mb-1">Preview</div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Jumlah PO</span><span className="font-medium">{selectedPos.length}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Jumlah Item</span><span className="font-medium">{previewCount.loading ? "…" : previewCount.items}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Periode</span><span className="font-medium">{exportMode === "all" ? "Seluruh data" : `${dateFrom || "-"} s/d ${dateTo || "-"}`}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Status</span><span className="font-medium capitalize">{exportMode === "all" ? "Semua" : statusFilter === "all" ? "Semua Status" : statusFilter}</span></div>
+              {selectedPos.length === 0 && !dateRangeInvalid && (
+                <p className="pt-2 text-xs text-destructive">Tidak ada data PO pada periode/filter yang dipilih.</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExportOpen(false)} disabled={exporting}>Batal</Button>
+            <Button onClick={handleExportCsv} disabled={exporting || dateRangeInvalid || selectedPos.length === 0 || previewCount.loading || previewCount.items === 0}>
+              {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              Unduh CSV
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!previewUrl} onOpenChange={(o) => !o && closePreview()}>
         <DialogContent
           className="max-w-3xl w-[92vw] h-[85vh] p-0 gap-0 overflow-hidden flex flex-col"
