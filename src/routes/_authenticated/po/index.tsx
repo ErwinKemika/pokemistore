@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
-import { FileText, Plus, Download, Truck, Loader2, Search, Trash2, Eye, ChevronDown, FileDown } from "lucide-react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FileText, Plus, Download, Truck, Loader2, Search, Trash2, Eye, ChevronDown, FileDown, AlertTriangle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -85,6 +87,16 @@ function PoIndex() {
   const [previewTitle, setPreviewTitle] = useState("");
   const prevUrlRef = useRef<string | null>(null);
 
+  // Export modal state
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const firstOfMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportMode, setExportMode] = useState<"range" | "all">("range");
+  const [dateFrom, setDateFrom] = useState(firstOfMonth);
+  const [dateTo, setDateTo] = useState(todayStr);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
   const closePreview = () => {
     if (prevUrlRef.current) {
       URL.revokeObjectURL(prevUrlRef.current);
@@ -93,23 +105,73 @@ function PoIndex() {
     setPreviewUrl(null);
   };
 
+  // Compute POs that match modal selection (for preview & export)
+  const selectedPos = useMemo(() => {
+    if (exportMode === "all") return rows;
+    if (!dateFrom || !dateTo) return [];
+    return rows.filter((r) => {
+      if (r.tgl_po < dateFrom || r.tgl_po > dateTo) return false;
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      return true;
+    });
+  }, [rows, exportMode, dateFrom, dateTo, statusFilter]);
+
+  const [previewCount, setPreviewCount] = useState<{ items: number; loading: boolean }>({ items: 0, loading: false });
+
+  useEffect(() => {
+    if (!exportOpen) return;
+    if (selectedPos.length === 0) {
+      setPreviewCount({ items: 0, loading: false });
+      return;
+    }
+    let cancelled = false;
+    setPreviewCount((p) => ({ ...p, loading: true }));
+    (async () => {
+      const { count } = await supabase
+        .from("po_items")
+        .select("id", { count: "exact", head: true })
+        .in("po_id", selectedPos.map((p) => p.id));
+      if (!cancelled) setPreviewCount({ items: count ?? 0, loading: false });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [exportOpen, selectedPos]);
+
+  const dateRangeInvalid = exportMode === "range" && (!dateFrom || !dateTo || dateFrom > dateTo);
+
   const handleExportCsv = async () => {
-    if (filtered.length === 0) {
-      toast.error("Tidak ada data untuk diexport");
+    if (exportMode === "range") {
+      if (!dateFrom || !dateTo) {
+        toast.error("Tanggal Mulai dan Tanggal Akhir wajib diisi");
+        return;
+      }
+      if (dateFrom > dateTo) {
+        toast.error("Tanggal Mulai tidak boleh lebih besar dari Tanggal Akhir");
+        return;
+      }
+    }
+    if (selectedPos.length === 0) {
+      toast.error("Tidak ada data PO pada periode/filter yang dipilih.");
       return;
     }
     setExporting(true);
     try {
-      const ids = filtered.map((r) => r.id);
+      const ids = selectedPos.map((r) => r.id);
       const { data, error } = await supabase
         .from("po_items")
-        .select("po_id,no_item,kode,nama_produk,kemasan,qty,harga,subtotal")
+        .select("id,po_id,no_item,kode,nama_produk,kemasan,qty,harga,subtotal")
         .in("po_id", ids)
         .order("no_item");
       if (error) throw error;
+      const items = data ?? [];
+      if (items.length === 0) {
+        toast.error("Tidak ada data PO pada periode/filter yang dipilih.");
+        return;
+      }
       const byPo = new Map<string, PoRow>();
-      filtered.forEach((p) => byPo.set(p.id, p));
-      const rowsItems = (data ?? []).slice().sort((a, b) => {
+      selectedPos.forEach((p) => byPo.set(p.id, p));
+      const rowsItems = items.slice().sort((a, b) => {
         const pa = byPo.get(a.po_id as string);
         const pb = byPo.get(b.po_id as string);
         if (!pa || !pb) return 0;
@@ -118,7 +180,7 @@ function PoIndex() {
         return (a.no_item as number) - (b.no_item as number);
       });
       const headers = [
-        "No","Tanggal PO","Nomor PO","Status PO","Kode Barang","Nama Barang","Vol","Unit","Harga Satuan","Harga Total Barang",
+        "No","Tanggal PO","Nomor PO","ID Detail PO","Status PO","Kode Barang","Nama Barang","Vol","Unit","Harga Satuan","Harga Total Barang",
       ];
       const esc = (v: unknown) => {
         const s = v == null ? "" : String(v);
@@ -132,6 +194,7 @@ function PoIndex() {
           idx + 1,
           po.tgl_po,
           po.no_po,
+          (it as { id?: string }).id ?? it.no_item,
           po.status.charAt(0).toUpperCase() + po.status.slice(1),
           it.kode,
           it.nama_produk,
@@ -146,7 +209,11 @@ function PoIndex() {
       const url = URL.createObjectURL(blob);
       const now = new Date();
       const pad = (n: number) => String(n).padStart(2, "0");
-      const fname = `riwayat-po-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.csv`;
+      const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
+      const compact = (d: string) => d.replace(/-/g, "");
+      const fname = exportMode === "all"
+        ? `riwayat-po-seluruh-data-${stamp}.csv`
+        : `riwayat-po-${compact(dateFrom)}-sampai-${compact(dateTo)}.csv`;
       const a = document.createElement("a");
       a.href = url;
       a.download = fname;
@@ -155,12 +222,14 @@ function PoIndex() {
       a.remove();
       URL.revokeObjectURL(url);
       toast.success(`CSV diexport: ${fname}`);
+      setExportOpen(false);
     } catch (e) {
       toast.error("Gagal export CSV: " + (e as Error).message);
     } finally {
       setExporting(false);
     }
   };
+
 
   const handleDelete = async () => {
     if (!deleteStep2) return;
@@ -265,8 +334,8 @@ function PoIndex() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExportCsv} disabled={exporting || loading}>
-            {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+          <Button variant="outline" onClick={() => setExportOpen(true)} disabled={loading}>
+            <FileDown className="mr-2 h-4 w-4" />
             Export CSV
           </Button>
           <Button asChild>
@@ -458,6 +527,85 @@ function PoIndex() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={exportOpen} onOpenChange={(o) => !exporting && setExportOpen(o)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Export CSV Riwayat PO</DialogTitle>
+            <DialogDescription>Pilih data yang ingin diunduh.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <RadioGroup value={exportMode} onValueChange={(v) => setExportMode(v as "range" | "all")} className="space-y-2">
+              <div className="flex items-start gap-2 rounded-md border p-3">
+                <RadioGroupItem value="range" id="opt-range" className="mt-1" />
+                <div className="flex-1 space-y-3">
+                  <Label htmlFor="opt-range" className="font-medium cursor-pointer">Berdasarkan Rentang Tanggal</Label>
+                  {exportMode === "range" && (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Tanggal Mulai</Label>
+                          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Tanggal Akhir</Label>
+                          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Status PO</Label>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Semua Status</SelectItem>
+                            <SelectItem value="draft">Draft</SelectItem>
+                            <SelectItem value="diproses">Diproses</SelectItem>
+                            <SelectItem value="diterima">Diterima</SelectItem>
+                            <SelectItem value="lunas">Lunas</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {dateRangeInvalid && (
+                        <p className="text-xs text-destructive">Tanggal Mulai tidak boleh lebih besar dari Tanggal Akhir.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-start gap-2 rounded-md border p-3">
+                <RadioGroupItem value="all" id="opt-all" className="mt-1" />
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="opt-all" className="font-medium cursor-pointer">Seluruh Riwayat PO</Label>
+                  {exportMode === "all" && (
+                    <div className="flex gap-2 rounded-md bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300">
+                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span>Export seluruh riwayat PO akan mengunduh semua data PO dari awal. Gunakan opsi ini hanya jika data lokal/Excel hilang atau ingin melakukan backup ulang seluruh data.</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </RadioGroup>
+
+            <div className="rounded-md bg-muted/50 p-3 text-sm space-y-1">
+              <div className="font-medium mb-1">Preview</div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Jumlah PO</span><span className="font-medium">{selectedPos.length}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Jumlah Item</span><span className="font-medium">{previewCount.loading ? "…" : previewCount.items}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Periode</span><span className="font-medium">{exportMode === "all" ? "Seluruh data" : `${dateFrom || "-"} s/d ${dateTo || "-"}`}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Status</span><span className="font-medium capitalize">{exportMode === "all" ? "Semua" : statusFilter === "all" ? "Semua Status" : statusFilter}</span></div>
+              {selectedPos.length === 0 && !dateRangeInvalid && (
+                <p className="pt-2 text-xs text-destructive">Tidak ada data PO pada periode/filter yang dipilih.</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExportOpen(false)} disabled={exporting}>Batal</Button>
+            <Button onClick={handleExportCsv} disabled={exporting || dateRangeInvalid || selectedPos.length === 0 || previewCount.loading || previewCount.items === 0}>
+              {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              Unduh CSV
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!previewUrl} onOpenChange={(o) => !o && closePreview()}>
         <DialogContent
