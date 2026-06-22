@@ -565,7 +565,7 @@ function PoIndex() {
                           </TableRow>
                         );
                       })}
-                    </>
+                    </Fragment>
                   );
                 })
               )}
