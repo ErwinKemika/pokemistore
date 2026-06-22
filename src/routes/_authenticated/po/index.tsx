@@ -466,10 +466,19 @@ function PoIndex() {
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
-                    Belum ada PO. Klik "Buat PO Baru" untuk mulai.
+                  <TableCell colSpan={5} className="py-16 text-center">
+                    {hasActiveFilter ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <p className="font-semibold">Tidak ada PO ditemukan</p>
+                        <p className="text-sm text-muted-foreground">Coba ubah kata kunci pencarian atau filter bulan/tahun.</p>
+                        <Button variant="outline" size="sm" onClick={resetFilters} className="mt-2">Reset Filter</Button>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Belum ada PO. Klik "Buat PO Baru" untuk mulai.</span>
+                    )}
                   </TableCell>
                 </TableRow>
+
               ) : (
                 filtered.map((po) => {
                   const loadingPo = pdfLoading === `${po.id}-po`;
