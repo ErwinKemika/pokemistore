@@ -317,44 +317,63 @@ function PoIndex() {
     }
   };
 
-  const [monthFilter, setMonthFilter] = useState<string>("all");
-  const [yearFilter, setYearFilter] = useState<string>("all");
-  const [listStatusFilter, setListStatusFilter] = useState<string>("all");
-
   const MONTH_NAMES = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
     "Juli", "Agustus", "September", "Oktober", "November", "Desember",
   ];
 
-  const availableYears = useMemo(() => {
-    const ys = new Set<number>();
-    rows.forEach((r) => {
-      const y = new Date(r.tgl_po).getFullYear();
-      if (!Number.isNaN(y)) ys.add(y);
-    });
-    return Array.from(ys).sort((a, b) => b - a);
-  }, [rows]);
-
   const filtered = useMemo(() => {
-    return rows.filter((r) => {
-      if (q && !r.no_po.toLowerCase().includes(q.toLowerCase())) return false;
+    if (!q) return rows;
+    const needle = q.toLowerCase();
+    return rows.filter((r) => r.no_po.toLowerCase().includes(needle));
+  }, [rows, q]);
+
+  const groups = useMemo(() => {
+    const map = new Map<string, { key: string; year: number; month: number; items: PoRow[]; total: number }>();
+    filtered.forEach((r) => {
       const d = new Date(r.tgl_po);
-      if (monthFilter !== "all" && d.getMonth() !== Number(monthFilter)) return false;
-      if (yearFilter !== "all" && d.getFullYear() !== Number(yearFilter)) return false;
-      if (listStatusFilter !== "all" && r.status !== listStatusFilter) return false;
-      return true;
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      const key = `${y}-${String(m).padStart(2, "0")}`;
+      let g = map.get(key);
+      if (!g) {
+        g = { key, year: y, month: m, items: [], total: 0 };
+        map.set(key, g);
+      }
+      g.items.push(r);
+      g.total += Number(r.grand_total) || 0;
     });
-  }, [rows, q, monthFilter, yearFilter, listStatusFilter]);
+    const arr = Array.from(map.values()).sort((a, b) => b.key.localeCompare(a.key));
+    arr.forEach((g) => g.items.sort((a, b) => (a.tgl_po < b.tgl_po ? 1 : a.tgl_po > b.tgl_po ? -1 : 0)));
+    return arr;
+  }, [filtered]);
 
-  const hasActiveFilter =
-    q !== "" || monthFilter !== "all" || yearFilter !== "all" || listStatusFilter !== "all";
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const initOpenRef = useRef(false);
+  useEffect(() => {
+    if (initOpenRef.current) return;
+    if (groups.length > 0) {
+      setOpenGroups(new Set([groups[0].key]));
+      initOpenRef.current = true;
+    }
+  }, [groups]);
 
-  const resetFilters = () => {
-    setQ("");
-    setMonthFilter("all");
-    setYearFilter("all");
-    setListStatusFilter("all");
+  useEffect(() => {
+    if (!q) return;
+    setOpenGroups(new Set(groups.map((g) => g.key)));
+  }, [q, groups]);
+
+  const toggleGroup = (key: string) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   };
+
+  const hasActiveFilter = q !== "";
+  const resetFilters = () => setQ("");
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
