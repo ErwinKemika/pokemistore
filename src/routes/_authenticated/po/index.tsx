@@ -317,9 +317,44 @@ function PoIndex() {
     }
   };
 
-  const filtered = rows.filter((r) =>
-    !q ? true : r.no_po.toLowerCase().includes(q.toLowerCase()),
-  );
+  const [monthFilter, setMonthFilter] = useState<string>("all");
+  const [yearFilter, setYearFilter] = useState<string>("all");
+  const [listStatusFilter, setListStatusFilter] = useState<string>("all");
+
+  const MONTH_NAMES = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+  ];
+
+  const availableYears = useMemo(() => {
+    const ys = new Set<number>();
+    rows.forEach((r) => {
+      const y = new Date(r.tgl_po).getFullYear();
+      if (!Number.isNaN(y)) ys.add(y);
+    });
+    return Array.from(ys).sort((a, b) => b - a);
+  }, [rows]);
+
+  const filtered = useMemo(() => {
+    return rows.filter((r) => {
+      if (q && !r.no_po.toLowerCase().includes(q.toLowerCase())) return false;
+      const d = new Date(r.tgl_po);
+      if (monthFilter !== "all" && d.getMonth() !== Number(monthFilter)) return false;
+      if (yearFilter !== "all" && d.getFullYear() !== Number(yearFilter)) return false;
+      if (listStatusFilter !== "all" && r.status !== listStatusFilter) return false;
+      return true;
+    });
+  }, [rows, q, monthFilter, yearFilter, listStatusFilter]);
+
+  const hasActiveFilter =
+    q !== "" || monthFilter !== "all" || yearFilter !== "all" || listStatusFilter !== "all";
+
+  const resetFilters = () => {
+    setQ("");
+    setMonthFilter("all");
+    setYearFilter("all");
+    setListStatusFilter("all");
+  };
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -346,19 +381,70 @@ function PoIndex() {
         </div>
       </div>
 
-      <div className="rounded-xl border bg-card">
-        <div className="flex items-center gap-3 border-b p-4">
-          <div className="relative max-w-sm flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Cari nomor PO..."
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="pl-9"
-            />
+      <div className="rounded-xl border bg-card shadow-sm">
+        <div className="space-y-3 border-b p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1 sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Cari nomor PO..."
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-1 sm:items-center">
+              <Select value={monthFilter} onValueChange={setMonthFilter}>
+                <SelectTrigger className="sm:w-[150px]"><SelectValue placeholder="Semua Bulan" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Bulan</SelectItem>
+                  {MONTH_NAMES.map((m, i) => (
+                    <SelectItem key={m} value={String(i)}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={yearFilter} onValueChange={setYearFilter}>
+                <SelectTrigger className="sm:w-[130px]"><SelectValue placeholder="Semua Tahun" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Tahun</SelectItem>
+                  {availableYears.map((y) => (
+                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={listStatusFilter} onValueChange={setListStatusFilter}>
+                <SelectTrigger className="sm:w-[150px]"><SelectValue placeholder="Semua Status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Status</SelectItem>
+                  <SelectItem value="diproses">Diproses</SelectItem>
+                  <SelectItem value="diterima">Diterima</SelectItem>
+                  <SelectItem value="ditagih">Ditagih</SelectItem>
+                </SelectContent>
+              </Select>
+              {hasActiveFilter && (
+                <Button variant="ghost" size="sm" onClick={resetFilters} className="sm:ml-auto col-span-2 sm:col-auto">
+                  Reset Filter
+                </Button>
+              )}
+            </div>
           </div>
-          <Badge variant="secondary">{filtered.length} PO</Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary">{filtered.length} PO ditemukan</Badge>
+            {monthFilter !== "all" && (
+              <Badge variant="outline">
+                {MONTH_NAMES[Number(monthFilter)]}{yearFilter !== "all" ? ` ${yearFilter}` : ""}
+              </Badge>
+            )}
+            {monthFilter === "all" && yearFilter !== "all" && (
+              <Badge variant="outline">Tahun {yearFilter}</Badge>
+            )}
+            {listStatusFilter !== "all" && (
+              <Badge variant="outline" className="capitalize">Status: {listStatusFilter}</Badge>
+            )}
+            {q && <Badge variant="outline">Pencarian: "{q}"</Badge>}
+          </div>
         </div>
+
 
         <div className="overflow-x-auto">
           <Table>
