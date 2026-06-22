@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { FileText, Plus, Download, Truck, Loader2, Search, Trash2, Eye, ChevronDown, FileDown, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -317,44 +317,63 @@ function PoIndex() {
     }
   };
 
-  const [monthFilter, setMonthFilter] = useState<string>("all");
-  const [yearFilter, setYearFilter] = useState<string>("all");
-  const [listStatusFilter, setListStatusFilter] = useState<string>("all");
-
   const MONTH_NAMES = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
     "Juli", "Agustus", "September", "Oktober", "November", "Desember",
   ];
 
-  const availableYears = useMemo(() => {
-    const ys = new Set<number>();
-    rows.forEach((r) => {
-      const y = new Date(r.tgl_po).getFullYear();
-      if (!Number.isNaN(y)) ys.add(y);
-    });
-    return Array.from(ys).sort((a, b) => b - a);
-  }, [rows]);
-
   const filtered = useMemo(() => {
-    return rows.filter((r) => {
-      if (q && !r.no_po.toLowerCase().includes(q.toLowerCase())) return false;
+    if (!q) return rows;
+    const needle = q.toLowerCase();
+    return rows.filter((r) => r.no_po.toLowerCase().includes(needle));
+  }, [rows, q]);
+
+  const groups = useMemo(() => {
+    const map = new Map<string, { key: string; year: number; month: number; items: PoRow[]; total: number }>();
+    filtered.forEach((r) => {
       const d = new Date(r.tgl_po);
-      if (monthFilter !== "all" && d.getMonth() !== Number(monthFilter)) return false;
-      if (yearFilter !== "all" && d.getFullYear() !== Number(yearFilter)) return false;
-      if (listStatusFilter !== "all" && r.status !== listStatusFilter) return false;
-      return true;
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      const key = `${y}-${String(m).padStart(2, "0")}`;
+      let g = map.get(key);
+      if (!g) {
+        g = { key, year: y, month: m, items: [], total: 0 };
+        map.set(key, g);
+      }
+      g.items.push(r);
+      g.total += Number(r.grand_total) || 0;
     });
-  }, [rows, q, monthFilter, yearFilter, listStatusFilter]);
+    const arr = Array.from(map.values()).sort((a, b) => b.key.localeCompare(a.key));
+    arr.forEach((g) => g.items.sort((a, b) => (a.tgl_po < b.tgl_po ? 1 : a.tgl_po > b.tgl_po ? -1 : 0)));
+    return arr;
+  }, [filtered]);
 
-  const hasActiveFilter =
-    q !== "" || monthFilter !== "all" || yearFilter !== "all" || listStatusFilter !== "all";
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const initOpenRef = useRef(false);
+  useEffect(() => {
+    if (initOpenRef.current) return;
+    if (groups.length > 0) {
+      setOpenGroups(new Set([groups[0].key]));
+      initOpenRef.current = true;
+    }
+  }, [groups]);
 
-  const resetFilters = () => {
-    setQ("");
-    setMonthFilter("all");
-    setYearFilter("all");
-    setListStatusFilter("all");
+  useEffect(() => {
+    if (!q) return;
+    setOpenGroups(new Set(groups.map((g) => g.key)));
+  }, [q, groups]);
+
+  const toggleGroup = (key: string) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   };
+
+  const hasActiveFilter = q !== "";
+  const resetFilters = () => setQ("");
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -382,66 +401,23 @@ function PoIndex() {
       </div>
 
       <div className="rounded-xl border bg-card shadow-sm">
-        <div className="space-y-3 border-b p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative flex-1 sm:max-w-xs">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Cari nomor PO..."
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-1 sm:items-center">
-              <Select value={monthFilter} onValueChange={setMonthFilter}>
-                <SelectTrigger className="sm:w-[150px]"><SelectValue placeholder="Semua Bulan" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Bulan</SelectItem>
-                  {MONTH_NAMES.map((m, i) => (
-                    <SelectItem key={m} value={String(i)}>{m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={yearFilter} onValueChange={setYearFilter}>
-                <SelectTrigger className="sm:w-[130px]"><SelectValue placeholder="Semua Tahun" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Tahun</SelectItem>
-                  {availableYears.map((y) => (
-                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={listStatusFilter} onValueChange={setListStatusFilter}>
-                <SelectTrigger className="sm:w-[150px]"><SelectValue placeholder="Semua Status" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Status</SelectItem>
-                  <SelectItem value="diproses">Diproses</SelectItem>
-                  <SelectItem value="diterima">Diterima</SelectItem>
-                  <SelectItem value="ditagih">Ditagih</SelectItem>
-                </SelectContent>
-              </Select>
-              {hasActiveFilter && (
-                <Button variant="ghost" size="sm" onClick={resetFilters} className="sm:ml-auto col-span-2 sm:col-auto">
-                  Reset Filter
-                </Button>
-              )}
-            </div>
+        <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative flex-1 sm:max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Cari nomor PO..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="pl-9"
+            />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
             <Badge variant="secondary">{filtered.length} PO ditemukan</Badge>
-            {monthFilter !== "all" && (
-              <Badge variant="outline">
-                {MONTH_NAMES[Number(monthFilter)]}{yearFilter !== "all" ? ` ${yearFilter}` : ""}
-              </Badge>
+            {hasActiveFilter && (
+              <Button variant="ghost" size="sm" onClick={resetFilters}>
+                Reset Pencarian
+              </Button>
             )}
-            {monthFilter === "all" && yearFilter !== "all" && (
-              <Badge variant="outline">Tahun {yearFilter}</Badge>
-            )}
-            {listStatusFilter !== "all" && (
-              <Badge variant="outline" className="capitalize">Status: {listStatusFilter}</Badge>
-            )}
-            {q && <Badge variant="outline">Pencarian: "{q}"</Badge>}
           </div>
         </div>
 
@@ -470,99 +446,126 @@ function PoIndex() {
                     {hasActiveFilter ? (
                       <div className="flex flex-col items-center gap-2">
                         <p className="font-semibold">Tidak ada PO ditemukan</p>
-                        <p className="text-sm text-muted-foreground">Coba ubah kata kunci pencarian atau filter bulan/tahun.</p>
-                        <Button variant="outline" size="sm" onClick={resetFilters} className="mt-2">Reset Filter</Button>
+                        <p className="text-sm text-muted-foreground">Coba gunakan nomor PO lain.</p>
+                        <Button variant="outline" size="sm" onClick={resetFilters} className="mt-2">Reset Pencarian</Button>
                       </div>
                     ) : (
                       <span className="text-muted-foreground">Belum ada PO. Klik "Buat PO Baru" untuk mulai.</span>
                     )}
                   </TableCell>
                 </TableRow>
-
               ) : (
-                filtered.map((po) => {
-                  const loadingPo = pdfLoading === `${po.id}-po`;
-                  const loadingSj = pdfLoading === `${po.id}-sj`;
+                groups.map((g) => {
+                  const isOpen = openGroups.has(g.key);
                   return (
-                    <TableRow key={po.id}>
-                      <TableCell className="font-mono text-sm font-medium">{po.no_po}</TableCell>
-                      <TableCell>{fmtDate(po.tgl_po)}</TableCell>
-                      <TableCell>
-                        <Select value={po.status} onValueChange={(v) => updateStatus(po, v)}>
-                          <SelectTrigger
-                            className={`h-8 w-[130px] border-0 font-medium capitalize ${STATUS_COLOR[po.status] ?? "bg-muted"}`}
-                          >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {STATUS_OPTIONS.map((s) => (
-                              <SelectItem key={s} value={s} className="capitalize">
-                                {s}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="text-right pr-6 tabular-nums font-medium">
-                        {fmtIDR(po.grand_total)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-2">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button size="sm" variant="outline" disabled={loadingPo || loadingSj}>
-                                {loadingPo ? (
-                                  <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <FileText className="mr-1 h-3.5 w-3.5" />
-                                )}
-                                PO
-                                <ChevronDown className="ml-1 h-3 w-3 opacity-60" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handlePdf(po, "po", "preview")}>
-                                <Eye className="mr-2 h-4 w-4" /> Review
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handlePdf(po, "po", "download")}>
-                                <Download className="mr-2 h-4 w-4" /> Unduh
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button size="sm" variant="outline" disabled={loadingPo || loadingSj}>
-                                {loadingSj ? (
-                                  <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <Truck className="mr-1 h-3.5 w-3.5" />
-                                )}
-                                Surat Jalan
-                                <ChevronDown className="ml-1 h-3 w-3 opacity-60" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handlePdf(po, "sj", "preview")}>
-                                <Eye className="mr-2 h-4 w-4" /> Review
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handlePdf(po, "sj", "download")}>
-                                <Download className="mr-2 h-4 w-4" /> Unduh
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                            onClick={() => setDeleteStep1(po)}
-                            disabled={loadingPo || loadingSj}
-                            aria-label="Hapus PO"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                    <Fragment key={g.key}>
+                      <TableRow
+                        key={`h-${g.key}`}
+                        className="cursor-pointer bg-emerald-50/60 hover:bg-emerald-50 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30"
+                        onClick={() => toggleGroup(g.key)}
+                      >
+                        <TableCell colSpan={5} className="py-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2 font-semibold">
+                              <ChevronDown
+                                className={`h-4 w-4 transition-transform duration-200 ${isOpen ? "" : "-rotate-90"}`}
+                              />
+                              <span>{MONTH_NAMES[g.month]} {g.year}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-sm">
+                              <span className="text-muted-foreground">{g.items.length} PO</span>
+                              <span className="hidden sm:inline text-muted-foreground">·</span>
+                              <span className="font-medium tabular-nums">{fmtIDR(g.total)}</span>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {isOpen && g.items.map((po) => {
+                        const loadingPo = pdfLoading === `${po.id}-po`;
+                        const loadingSj = pdfLoading === `${po.id}-sj`;
+                        return (
+                          <TableRow key={po.id}>
+                            <TableCell className="font-mono text-sm font-medium">{po.no_po}</TableCell>
+                            <TableCell>{fmtDate(po.tgl_po)}</TableCell>
+                            <TableCell>
+                              <Select value={po.status} onValueChange={(v) => updateStatus(po, v)}>
+                                <SelectTrigger
+                                  className={`h-8 w-[130px] border-0 font-medium capitalize ${STATUS_COLOR[po.status] ?? "bg-muted"}`}
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {STATUS_OPTIONS.map((s) => (
+                                    <SelectItem key={s} value={s} className="capitalize">
+                                      {s}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell className="text-right pr-6 tabular-nums font-medium">
+                              {fmtIDR(po.grand_total)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex justify-end gap-2">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button size="sm" variant="outline" disabled={loadingPo || loadingSj}>
+                                      {loadingPo ? (
+                                        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <FileText className="mr-1 h-3.5 w-3.5" />
+                                      )}
+                                      PO
+                                      <ChevronDown className="ml-1 h-3 w-3 opacity-60" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handlePdf(po, "po", "preview")}>
+                                      <Eye className="mr-2 h-4 w-4" /> Review
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handlePdf(po, "po", "download")}>
+                                      <Download className="mr-2 h-4 w-4" /> Unduh
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button size="sm" variant="outline" disabled={loadingPo || loadingSj}>
+                                      {loadingSj ? (
+                                        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <Truck className="mr-1 h-3.5 w-3.5" />
+                                      )}
+                                      Surat Jalan
+                                      <ChevronDown className="ml-1 h-3 w-3 opacity-60" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handlePdf(po, "sj", "preview")}>
+                                      <Eye className="mr-2 h-4 w-4" /> Review
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handlePdf(po, "sj", "download")}>
+                                      <Download className="mr-2 h-4 w-4" /> Unduh
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                                  onClick={() => setDeleteStep1(po)}
+                                  disabled={loadingPo || loadingSj}
+                                  aria-label="Hapus PO"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </Fragment>
                   );
                 })
               )}
