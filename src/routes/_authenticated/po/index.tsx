@@ -446,99 +446,126 @@ function PoIndex() {
                     {hasActiveFilter ? (
                       <div className="flex flex-col items-center gap-2">
                         <p className="font-semibold">Tidak ada PO ditemukan</p>
-                        <p className="text-sm text-muted-foreground">Coba ubah kata kunci pencarian atau filter bulan/tahun.</p>
-                        <Button variant="outline" size="sm" onClick={resetFilters} className="mt-2">Reset Filter</Button>
+                        <p className="text-sm text-muted-foreground">Coba gunakan nomor PO lain.</p>
+                        <Button variant="outline" size="sm" onClick={resetFilters} className="mt-2">Reset Pencarian</Button>
                       </div>
                     ) : (
                       <span className="text-muted-foreground">Belum ada PO. Klik "Buat PO Baru" untuk mulai.</span>
                     )}
                   </TableCell>
                 </TableRow>
-
               ) : (
-                filtered.map((po) => {
-                  const loadingPo = pdfLoading === `${po.id}-po`;
-                  const loadingSj = pdfLoading === `${po.id}-sj`;
+                groups.map((g) => {
+                  const isOpen = openGroups.has(g.key);
                   return (
-                    <TableRow key={po.id}>
-                      <TableCell className="font-mono text-sm font-medium">{po.no_po}</TableCell>
-                      <TableCell>{fmtDate(po.tgl_po)}</TableCell>
-                      <TableCell>
-                        <Select value={po.status} onValueChange={(v) => updateStatus(po, v)}>
-                          <SelectTrigger
-                            className={`h-8 w-[130px] border-0 font-medium capitalize ${STATUS_COLOR[po.status] ?? "bg-muted"}`}
-                          >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {STATUS_OPTIONS.map((s) => (
-                              <SelectItem key={s} value={s} className="capitalize">
-                                {s}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="text-right pr-6 tabular-nums font-medium">
-                        {fmtIDR(po.grand_total)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-2">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button size="sm" variant="outline" disabled={loadingPo || loadingSj}>
-                                {loadingPo ? (
-                                  <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <FileText className="mr-1 h-3.5 w-3.5" />
-                                )}
-                                PO
-                                <ChevronDown className="ml-1 h-3 w-3 opacity-60" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handlePdf(po, "po", "preview")}>
-                                <Eye className="mr-2 h-4 w-4" /> Review
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handlePdf(po, "po", "download")}>
-                                <Download className="mr-2 h-4 w-4" /> Unduh
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button size="sm" variant="outline" disabled={loadingPo || loadingSj}>
-                                {loadingSj ? (
-                                  <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <Truck className="mr-1 h-3.5 w-3.5" />
-                                )}
-                                Surat Jalan
-                                <ChevronDown className="ml-1 h-3 w-3 opacity-60" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handlePdf(po, "sj", "preview")}>
-                                <Eye className="mr-2 h-4 w-4" /> Review
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handlePdf(po, "sj", "download")}>
-                                <Download className="mr-2 h-4 w-4" /> Unduh
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                            onClick={() => setDeleteStep1(po)}
-                            disabled={loadingPo || loadingSj}
-                            aria-label="Hapus PO"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                    <>
+                      <TableRow
+                        key={`h-${g.key}`}
+                        className="cursor-pointer bg-emerald-50/60 hover:bg-emerald-50 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30"
+                        onClick={() => toggleGroup(g.key)}
+                      >
+                        <TableCell colSpan={5} className="py-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2 font-semibold">
+                              <ChevronDown
+                                className={`h-4 w-4 transition-transform duration-200 ${isOpen ? "" : "-rotate-90"}`}
+                              />
+                              <span>{MONTH_NAMES[g.month]} {g.year}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-sm">
+                              <span className="text-muted-foreground">{g.items.length} PO</span>
+                              <span className="hidden sm:inline text-muted-foreground">·</span>
+                              <span className="font-medium tabular-nums">{fmtIDR(g.total)}</span>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {isOpen && g.items.map((po) => {
+                        const loadingPo = pdfLoading === `${po.id}-po`;
+                        const loadingSj = pdfLoading === `${po.id}-sj`;
+                        return (
+                          <TableRow key={po.id}>
+                            <TableCell className="font-mono text-sm font-medium">{po.no_po}</TableCell>
+                            <TableCell>{fmtDate(po.tgl_po)}</TableCell>
+                            <TableCell>
+                              <Select value={po.status} onValueChange={(v) => updateStatus(po, v)}>
+                                <SelectTrigger
+                                  className={`h-8 w-[130px] border-0 font-medium capitalize ${STATUS_COLOR[po.status] ?? "bg-muted"}`}
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {STATUS_OPTIONS.map((s) => (
+                                    <SelectItem key={s} value={s} className="capitalize">
+                                      {s}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell className="text-right pr-6 tabular-nums font-medium">
+                              {fmtIDR(po.grand_total)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex justify-end gap-2">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button size="sm" variant="outline" disabled={loadingPo || loadingSj}>
+                                      {loadingPo ? (
+                                        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <FileText className="mr-1 h-3.5 w-3.5" />
+                                      )}
+                                      PO
+                                      <ChevronDown className="ml-1 h-3 w-3 opacity-60" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handlePdf(po, "po", "preview")}>
+                                      <Eye className="mr-2 h-4 w-4" /> Review
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handlePdf(po, "po", "download")}>
+                                      <Download className="mr-2 h-4 w-4" /> Unduh
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button size="sm" variant="outline" disabled={loadingPo || loadingSj}>
+                                      {loadingSj ? (
+                                        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <Truck className="mr-1 h-3.5 w-3.5" />
+                                      )}
+                                      Surat Jalan
+                                      <ChevronDown className="ml-1 h-3 w-3 opacity-60" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handlePdf(po, "sj", "preview")}>
+                                      <Eye className="mr-2 h-4 w-4" /> Review
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handlePdf(po, "sj", "download")}>
+                                      <Download className="mr-2 h-4 w-4" /> Unduh
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                                  onClick={() => setDeleteStep1(po)}
+                                  disabled={loadingPo || loadingSj}
+                                  aria-label="Hapus PO"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </>
                   );
                 })
               )}
