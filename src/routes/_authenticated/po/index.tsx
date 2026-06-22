@@ -458,7 +458,7 @@ function PoIndex() {
                 groups.map((g) => {
                   const isOpen = openGroups.has(g.key);
                   return (
-                    <>
+                    <Fragment key={g.key}>
                       <TableRow
                         key={`h-${g.key}`}
                         className="cursor-pointer bg-emerald-50/60 hover:bg-emerald-50 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30"
